@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
-import { useDrag, useDrop } from 'react-dnd';
-import { Checkbox } from '../ui/Checkbox';
+import { useDrag, useDrop, DropTargetMonitor } from 'react-dnd';
 import { Task } from '../../store/todoStore';
 
 const ItemType = {
@@ -10,21 +9,25 @@ const ItemType = {
 interface DraggableTaskProps {
     task: Task;
     onDrop: (task: Task) => void;
+    children: React.ReactNode;
 }
 
-export const DraggableTask: React.FC<DraggableTaskProps> = ({ task, onDrop }) => {
+export const DraggableTask: React.FC<DraggableTaskProps> = ({ task, onDrop, children }) => {
     const ref = useRef<HTMLLIElement>(null);
 
-    const [, drag] = useDrag({
+    const [{ isDragging }, drag] = useDrag({
         type: ItemType.TASK,
-        item: { ...task },
+        item: { id: task.id, completed: task.completed },
+        collect: (monitor) => ({
+            isDragging: monitor.isDragging(),
+        }),
     });
 
     const [, drop] = useDrop({
         accept: ItemType.TASK,
-        drop: (droppedTask: Task) => {
-            if (droppedTask.id !== task.id) {
-                onDrop(droppedTask);
+        drop: (item: Task, monitor: DropTargetMonitor) => {
+            if (!monitor.didDrop()) {
+                onDrop(item);
             }
         },
     });
@@ -34,13 +37,9 @@ export const DraggableTask: React.FC<DraggableTaskProps> = ({ task, onDrop }) =>
     return (
         <li
             ref={ref}
-            className="flex justify-between items-center p-2 border-b border-stoneGray-400 min-h-15"
+            className={`flex justify-between items-center p-2 border-b border-stoneGray-400 min-h-15 ${isDragging ? 'opacity-50' : ''}`}
         >
-            <Checkbox
-                checked={task.completed}
-                onChange={() => onDrop(task)}
-                label={task.title}
-            />
+            {children}
         </li>
     );
 };

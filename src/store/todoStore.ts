@@ -7,11 +7,10 @@ export interface Task {
   completed: boolean;
 }
 
-interface ToDoState {
+export interface ToDoState {
   tasks: Task[];
   fetchTasks: () => void;
   addTask: (title: string) => void;
-  editTask: (id: number, title: string) => void;
   markTaskComplete: (id: number) => void;
   markTaskIncomplete: (id: number) => void;
 }
@@ -19,7 +18,7 @@ interface ToDoState {
 const STORAGE_KEY = 'todo_tasks';
 
 export const useToDoStore = create<ToDoState>((set) => ({
-  tasks: loadFromStorage<Task[]>(STORAGE_KEY, []),
+  tasks: [],
   fetchTasks: () => {
     const tasks = loadFromStorage<Task[]>(STORAGE_KEY, []);
     set({ tasks });
@@ -28,15 +27,6 @@ export const useToDoStore = create<ToDoState>((set) => ({
     set((state) => {
       const newTask = { id: Date.now(), title, completed: false };
       const updatedTasks = [...state.tasks, newTask];
-      saveToStorage(STORAGE_KEY, updatedTasks);
-      return { tasks: updatedTasks };
-    });
-  },
-  editTask: (id: number, title: string) => {
-    set((state) => {
-      const updatedTasks = state.tasks.map((task) =>
-        task.id === id ? { ...task, title } : task
-      );
       saveToStorage(STORAGE_KEY, updatedTasks);
       return { tasks: updatedTasks };
     });

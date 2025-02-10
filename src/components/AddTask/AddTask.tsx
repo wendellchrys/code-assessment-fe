@@ -26,6 +26,7 @@ export const AddTask: React.FC = () => {
                         handleSubmit(e);
                     }
                 }}
+                data-testid="task-input"
             />
         </form>
     );
