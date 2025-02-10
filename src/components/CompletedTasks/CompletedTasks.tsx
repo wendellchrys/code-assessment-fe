@@ -38,23 +38,26 @@ export const CompletedTasks: React.FC<CompletedTasksProps> = ({ onDrop, onTaskTo
 
     drop(ref);
 
+    const completedTasks = tasks.filter((task) => task.completed);
+
     return (
         <div ref={ref} className="rounded-lg" data-testid="completed-tasks-container">
             <h2 className="text-xs font-bold mb-3.75 text-stoneGray-700">Concluído</h2>
             <ul className="space-y-2" data-testid="completed-tasks-list">
-                {tasks &&
-                    tasks
-                        .filter((task) => task.completed)
-                        .map((task: Task) => (
-                            <DraggableTask key={task.id} task={task} onDrop={handleDrop}>
-                                <Checkbox
-                                    checked={task.completed}
-                                    onChange={() => handleToggle(task.id)}
-                                    label={task.title}
-                                    data-testid={`task-checkbox-${task.id}`}
-                                />
-                            </DraggableTask>
-                        ))}
+                {completedTasks.length > 0 ? (
+                    completedTasks.map((task: Task) => (
+                        <DraggableTask key={task.id} task={task} onDrop={handleDrop}>
+                            <Checkbox
+                                checked={task.completed}
+                                onChange={() => handleToggle(task.id)}
+                                label={task.title}
+                                data-testid={`task-checkbox-${task.id}`}
+                            />
+                        </DraggableTask>
+                    ))
+                ) : (
+                    <li className="text-sm text-stoneGray-700">Nenhuma tarefa concluída.</li>
+                )}
             </ul>
         </div>
     );
