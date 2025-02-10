@@ -9,7 +9,7 @@ const ItemType = {
 };
 
 interface ToDoListProps {
-    onDrop: (item: { id: number, completed: boolean }) => void;
+    onDrop: (item: { id: number; completed: boolean }) => void;
 }
 
 export const ToDoList: React.FC<ToDoListProps> = ({ onDrop }) => {
@@ -20,7 +20,7 @@ export const ToDoList: React.FC<ToDoListProps> = ({ onDrop }) => {
         fetchTasks();
     }, [fetchTasks]);
 
-    const handleDrop = (item: { id: number, completed: boolean }) => {
+    const handleDrop = (item: { id: number; completed: boolean }) => {
         onDrop(item);
     };
 
@@ -34,26 +34,32 @@ export const ToDoList: React.FC<ToDoListProps> = ({ onDrop }) => {
 
     const [, drop] = useDrop({
         accept: ItemType.TASK,
-        drop: (item: { id: number, completed: boolean }) => {
+        drop: (item: { id: number; completed: boolean }) => {
             handleDrop(item);
         },
     });
 
     drop(ref);
 
+    const incompleteTasks = tasks.filter(task => !task.completed);
+
     return (
         <div ref={ref} className="rounded-lg">
             <h2 className="text-xs font-bold mb-3.75 text-stoneGray-700">Para fazer</h2>
             <ul className="space-y-2">
-                {tasks.filter(task => !task.completed).map((task: Task) => (
-                    <DraggableTask key={task.id} task={task} onDrop={handleDrop}>
-                        <Checkbox
-                            checked={task.completed}
-                            onChange={() => handleCheckboxChange(task)}
-                            label={task.title}
-                        />
-                    </DraggableTask>
-                ))}
+                {incompleteTasks.length > 0 ? (
+                    incompleteTasks.map((task: Task) => (
+                        <DraggableTask key={task.id} task={task} onDrop={handleDrop}>
+                            <Checkbox
+                                checked={task.completed}
+                                onChange={() => handleCheckboxChange(task)}
+                                label={task.title}
+                            />
+                        </DraggableTask>
+                    ))
+                ) : (
+                    <li className="text-sm text-stoneGray-700">Não há tarefas pendentes.</li>
+                )}
             </ul>
         </div>
     );

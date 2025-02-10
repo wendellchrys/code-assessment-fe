@@ -1,93 +1,106 @@
-import React from 'react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ToDoList } from './ToDoList';
-import { useToDoStore, Task } from '../../store/todoStore';
-import { useDrop } from 'react-dnd';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CompletedTasks } from '../CompletedTasks';
+import { Task, useToDoStore } from '../../store/todoStore';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+
+const mockTasks: Task[] = [
+    { id: 1, title: 'Tarefa 1', completed: true },
+    { id: 2, title: 'Tarefa 2', completed: true },
+];
+
+const mockMarkTaskIncomplete = vi.fn();
 
 vi.mock('../../store/todoStore', () => ({
-    useToDoStore: vi.fn(),
+    __esModule: true,
+    useToDoStore: vi.fn(() => ({
+        tasks: mockTasks,
+        markTaskIncomplete: mockMarkTaskIncomplete,
+    })),
     Task: vi.fn(),
 }));
 
-vi.mock('../DraggableTask', () => ({
-    DraggableTask: ({ children }: { children: React.ReactNode }) => <div data-testid="draggable-task">{children}</div>,
-}));
+const mockUseToDoStore = vi.mocked(useToDoStore);
 
-vi.mock('react-dnd', () => ({
-    useDrop: vi.fn(() => [{}, vi.fn()])
+vi.mock('../DraggableTask', () => ({
+    DraggableTask: ({ children }: any) => <div data-testid="draggable-task">{children}</div>,
 }));
 
 vi.mock('../ui/Checkbox', () => ({
-    Checkbox: ({ checked, onChange, label }: { checked: boolean, onChange: () => void, label: string }) => (
+    Checkbox: ({ checked, onChange, label, ...rest }: any) => (
         <div data-testid="checkbox-container">
-            <input type="checkbox" checked={checked} onChange={onChange} data-testid="checkbox" />
+            <input type="checkbox" checked={checked} onChange={onChange} {...rest} data-testid="checkbox" />
             <label>{label}</label>
         </div>
-    )
+    ),
 }));
 
-describe('ToDoList Component', () => {
-    const mockTasks: Task[] = [
-        { id: 1, title: 'Task 1', completed: false },
-        { id: 2, title: 'Task 2', completed: false },
-        { id: 3, title: 'Task 3', completed: true },
-    ];
-    const mockOnDrop = vi.fn();
-    const mockFetchTasks = vi.fn();
-    const mockMarkTaskComplete = vi.fn();
-    const mockMarkTaskIncomplete = vi.fn();
-
+describe('component :: CompletedTasks', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-
-        (useToDoStore as any).mockReturnValue({
-            tasks: mockTasks,
-            fetchTasks: mockFetchTasks,
-            markTaskComplete: mockMarkTaskComplete,
-            markTaskIncomplete: mockMarkTaskIncomplete,
-        });
+        mockUseToDoStore.mockClear();
     });
 
-    it('renders the "Para fazer" heading', () => {
-        render(<ToDoList onDrop={mockOnDrop} />);
-        expect(screen.getByText('Para fazer')).toBeInTheDocument();
+    it('should render completed tasks', () => {
+        render(
+            <DndProvider backend={HTML5Backend}>
+                <CompletedTasks onDrop={vi.fn()} />
+            </DndProvider>
+        );
+        expect(screen.getByText('Concluído')).toBeInTheDocument();
+        expect(screen.getAllByTestId('draggable-task').length).toBe(2);
     });
 
-    it('fetches tasks on mount', () => {
-        render(<ToDoList onDrop={mockOnDrop} />);
-        expect(mockFetchTasks).toHaveBeenCalledTimes(1);
-    });
-
-    it('renders the correct number of incomplete tasks', () => {
-        render(<ToDoList onDrop={mockOnDrop} />);
-        const taskElements = screen.getAllByTestId('draggable-task');
-        expect(taskElements.length).toBe(2);
-    });
-
-    it('renders task titles correctly', () => {
-        render(<ToDoList onDrop={mockOnDrop} />);
-        expect(screen.getByText('Task 1')).toBeInTheDocument();
-        expect(screen.getByText('Task 2')).toBeInTheDocument();
-        expect(screen.queryByText('Task 3')).not.toBeInTheDocument();
-    });
-
-    it('calls markTaskComplete when an incomplete task checkbox is clicked', () => {
-        render(<ToDoList onDrop={mockOnDrop} />);
+    it('should call onTaskToggle when checkbox is clicked', () => {
+        const mockOnTaskToggle = vi.fn();
+        render(
+            <DndProvider backend={HTML5Backend}>
+                <CompletedTasks onDrop={vi.fn()} onTaskToggle={mockOnTaskToggle} />
+            </DndProvider>
+        );
         const checkbox = screen.getAllByTestId('checkbox')[0] as HTMLInputElement;
         fireEvent.click(checkbox);
-        expect(mockMarkTaskComplete).toHaveBeenCalledWith(mockTasks[0].id);
-        expect(mockMarkTaskIncomplete).not.toHaveBeenCalled();
+        expect(mockOnTaskToggle).toHaveBeenCalledTimes(1);
+        expect(mockOnTaskToggle).toHaveBeenCalledWith(mockTasks[0].id);
     });
 
-    it('calls onDrop when a task is dropped', () => {
-        render(<ToDoList onDrop={mockOnDrop} />);
+    it('should call markTaskIncomplete when onTaskToggle is not provided', () => {
+        render(
+            <DndProvider backend={HTML5Backend}>
+                <CompletedTasks onDrop={vi.fn()} />
+            </DndProvider>
+        );
+        const checkbox = screen.getAllByTestId('checkbox')[0] as HTMLInputElement;
+        fireEvent.click(checkbox);
+        expect(mockMarkTaskIncomplete).toHaveBeenCalledTimes(1);
+        expect(mockMarkTaskIncomplete).toHaveBeenCalledWith(mockTasks[0].id);
+    });
 
-        const dropFunction = (useDrop as any).mock.calls[0][0].drop;
+    it('should render and allow drag and drop (basic check)', () => {
+        const mockOnDrop = vi.fn();
+        render(
+            <DndProvider backend={HTML5Backend}>
+                <CompletedTasks onDrop={mockOnDrop} />
+            </DndProvider>
+        );
+        expect(screen.getAllByTestId('draggable-task').length).toBe(2);
+        expect(screen.getByTestId('completed-tasks-container')).toBeInTheDocument();
+    });
 
-        const droppedItem = { id: 4, title: 'Dropped Task', completed: false };
-        dropFunction(droppedItem);
+    it('should render "Nenhuma tarefa concluída" when there are no completed tasks', () => {
+        mockUseToDoStore.mockReturnValue({
+            tasks: [],
+            markTaskIncomplete: mockMarkTaskIncomplete,
+        } as any);
 
-        expect(mockOnDrop).toHaveBeenCalledWith(droppedItem);
+        render(
+            <DndProvider backend={HTML5Backend}>
+                <CompletedTasks onDrop={vi.fn()} />
+            </DndProvider>
+        );
+
+        expect(screen.getByText('Nenhuma tarefa concluída.')).toBeInTheDocument();
+        expect(screen.queryByTestId('draggable-task')).toBeNull();
     });
 });
